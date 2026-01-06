@@ -1,5 +1,4 @@
-# filepath: /Users/sonit/Documents/fileChat/README.md
-# FileChat - Document RAG Example
+# FileChat - RAG Application
 
 This repository demonstrates a hybrid RAG (Retrieval-Augmented Generation) setup using local Ollama embeddings and Azure OpenAI for chat.
 
