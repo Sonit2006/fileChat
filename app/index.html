@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Chatbot</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #chat-container::-webkit-scrollbar { width: 4px; }
+        #chat-container::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 20px; }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col h-screen">
+
+    <header class="bg-white shadow-md p-4">
+        <h1 class="text-2xl font-bold text-gray-800 text-center">Local AI Chatbot</h1>
+    </header>
+
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <div id="message-list" class="space-y-6">
+            <!-- Messages will be injected here -->
+        </div>
+    </main>
+
+    <footer class="bg-white p-4 border-t border-gray-200">
+        <div class="max-w-4xl mx-auto">
+            <div id="loading-indicator" class="hidden text-center text-sm text-gray-500 mb-2">
+                <p>Thinking...</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <textarea id="chat-input" class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" placeholder="Ask a question..." rows="1"></textarea>
+                <button id="send-button" class="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd" /></svg>
+                </button>
+                <button id="voice-button" class="bg-gray-600 text-white p-3 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                    <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm5 2a1 1 0 11-2 0V4a1 1 0 112 0v2zm-4 4a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zm-2-4a5 5 0 00-4.546 2.916A5.986 5.986 0 002 12c0 3.314 2.686 6 6 6s6-2.686 6-6c0-1.31-.42-2.522-1.135-3.546A5 5 0 0012 4V2a1 1 0 10-2 0v2a3 3 0 01-3 3V4a1 1 0 10-2 0v2z" clip-rule="evenodd" /></svg>
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- CONFIGURATION ---
+        const API_BASE_URL = window.location.origin;
+
+        // --- DOM ELEMENTS ---
+        const messageList = document.getElementById('message-list');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const voiceButton = document.getElementById('voice-button');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const micIcon = document.getElementById('mic-icon');
+
+        // --- VOICE RECOGNITION (Speech-to-Text) ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        let isRecognizing = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+
+            recognition.onresult = (event) => {
+                // THE FIX IS HERE: It now only populates the text box.
+                const transcript = event.results[0][0].transcript;
+                chatInput.value = transcript;
+                stopRecognition();
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                stopRecognition();
+            };
+            
+            recognition.onend = () => {
+                stopRecognition();
+            };
+        } else {
+            voiceButton.style.display = 'none'; // Hide button if API not supported
+        }
+        
+        function startRecognition() {
+            if (isRecognizing) return;
+            isRecognizing = true;
+            micIcon.classList.add('text-red-500');
+            recognition.start();
+        }
+
+        function stopRecognition() {
+            if (!isRecognizing) return;
+            isRecognizing = false;
+            micIcon.classList.remove('text-red-500');
+            recognition.stop();
+        }
+        
+        // --- TEXT-TO-SPEECH ---
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- CHAT LOGIC ---
+        function addMessage(text, isFromUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${isFromUser ? 'justify-end' : 'justify-start'}`;
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = `max-w-xl lg:max-w-2xl px-4 py-3 rounded-lg shadow ${isFromUser ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'}`;
+            
+            textDiv.innerHTML = formatResponse(text);
+            
+            messageDiv.appendChild(textDiv);
+            messageList.appendChild(messageDiv);
+            messageList.scrollTop = messageList.scrollHeight;
+        }
+        
+        function formatResponse(text) {
+            const sanitizedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const pathRegex = /(\b[a-zA-Z]:[\\/][^:\n\r<>"|?*]+)|(\.\/[^:\n\r<>"|?*]+)/g;
+            
+            let html = sanitizedText;
+            const sources = sanitizedText.match(pathRegex) || [];
+            
+            if (sources.length > 0) {
+                let sourcesHtml = '<div class="mt-4 pt-3 border-t border-gray-200">';
+                sourcesHtml += '<h4 class="font-semibold text-sm mb-2">Sources:</h4>';
+                sources.forEach(source => {
+                    const documentsFolder = "documents"; // Change if your folder is named differently
+                    const pathParts = source.split(documentsFolder);
+                    const relativePath = pathParts.length > 1 ? pathParts[1] : source;
+
+                    const cleanPath = relativePath.replace(/\\/g, '/').replace(/^\//, '');
+                    const encodedPath = encodeURIComponent(cleanPath);
+                    
+                    // THE FIX IS HERE: Links are now styled as buttons.
+                    const filename = source.split(/[\\/]/).pop(); // Extracts the filename from the path
+                    sourcesHtml += `<a href="/files/${encodedPath}" target="_blank" class="inline-block bg-green-600 text-white text-sm font-semibold py-1 px-3 rounded-lg hover:bg-green-700 transition-colors duration-200 mr-2 mb-2">${filename}</a>`;
+                    // Remove the source path from the main text to avoid duplication
+                    html = html.replace(source, '');
+                });
+                sourcesHtml += '</div>';
+                html = html.replace(/\*\*Sources:\*\*/i, '') + sourcesHtml;
+            }
+            
+            return html;
+        }
+
+        async function sendMessage() {
+            const question = chatInput.value.trim();
+            if (!question) return;
+
+            addMessage(question, true);
+            chatInput.value = '';
+            loadingIndicator.style.display = 'block';
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch(`/ask`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+
+                if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
+
+                const data = await response.json();
+                let fullResponse = data.answer;
+                if (data.sources && data.sources.length > 0) {
+                    fullResponse += "\n\n**Sources:**\n" + data.sources.join('\n');
+                }
+                
+                addMessage(fullResponse, false);
+                speak(data.answer);
+
+            } catch (error) {
+                console.error("Error sending message:", error);
+                addMessage(`Sorry, an error occurred: ${error.message}`, false);
+            } finally {
+                loadingIndicator.style.display = 'none';
+                sendButton.disabled = false;
+            }
+        }
+        
+        // --- EVENT LISTENERS ---
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        if (SpeechRecognition) {
+            voiceButton.addEventListener('click', () => {
+                isRecognizing ? stopRecognition() : startRecognition();
+            });
+        }
+
+        addMessage("Hello! Ask me anything about your documents. Click the mic to use your voice.", false);
+    </script>
+</body>
+</html>

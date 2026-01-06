@@ -1,0 +1,67 @@
+# Ignore Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment and secret files
+.env
+.env.*
+*.env
+*.secret
+credentials.json
+secrets.json
+*.key
+*.pem
+*.crt
+
+# Azure / cloud credentials
+.azure/
+azure_credentials.json
+
+# Local data, indexes and databases
+/faiss_index/
+faiss_index/
+/MyDrive/
+MyDrive/
+*.sqlite
+*.db
+
+# Logs and runtime files
+logs/
+*.log
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Python build / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Test outputs
+.pytest_cache/
+
+# Ignore large binary attachments
+*.tar.gz
+*.zip
+*.tgz
+
+# Keep node_modules if present
+node_modules/
+
+# Optional: ignore all notebooks (uncomment if desired)
+# *.ipynb

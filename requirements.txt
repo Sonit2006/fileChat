@@ -1,0 +1,14 @@
+# Let pip's dependency resolver find the correct compatible versions
+langchain
+langchain-community
+langchain-text-splitters
+langchain-ollama
+faiss-cpu
+pypdf
+python-docx
+docx2txt
+langchain-openai
+fastapi
+uvicorn
+streamlit
+python-dotenv
